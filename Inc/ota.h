@@ -16,9 +16,6 @@
 
 /* Defines */
 
-// Address for where to put firmware file in flash
-#define FLASH_FIRMWARE_STARTING_ADDR 135266304 // (0x8100000)
-
 /* Structs */
 typedef struct __FirmwareInfo {
 	HAL_StatusTypeDef status;					/* Status of firmware upload (HAL_OK or HAL_ERROR) */
@@ -31,13 +28,16 @@ typedef struct __FirmwareInfo {
 	uint16_t hardwareType;						/* */
 } FirmwareInfo;
 
+
 /* Functions prototypes */
+
+// OTA functions
+HAL_StatusTypeDef BT122FirmwareUpgrade(const uint32_t flashAddress, UART_HandleTypeDef *huart, HASH_HandleTypeDef *hhash);
+HAL_StatusTypeDef U5FirmwareUpgrade(UART_HandleTypeDef *huart, HASH_HandleTypeDef *hhash);
 
 // Firmware download functions
 int download_firmware(UART_HandleTypeDef *huart, char *firmware, int size);
 HAL_StatusTypeDef downloadFirmwareToFlash(UART_HandleTypeDef *huart, uint32_t flashAddress, int size);
-
-
 
 // Firmware upload functions
 FirmwareInfo uploadFirmwareToBT122(UART_HandleTypeDef *huart, const uint32_t flashAddress, const uint32_t firmwareSize);

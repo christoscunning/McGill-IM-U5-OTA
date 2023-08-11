@@ -31,9 +31,6 @@ void printBuffer(char *buffer, int length, char *format) {
 	printf("\n");
 }
 
-
-// CUSTOM HASHING FUNCTIONS -> not sure if this is actually possible
-
 /**
  * Returns 0 if little Endian, 1 if big Endian.
  */

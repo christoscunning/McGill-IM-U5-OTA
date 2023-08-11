@@ -4,12 +4,21 @@
 
 #include "dumo_bglib.h"
 #include "stm32u5xx_hal.h"
+#include <string.h>
 
 UART_HandleTypeDef huart12;
-UART_HandleTypeDef *hlpuart1;
+UART_HandleTypeDef hlpuart1;
 #define STORAGE_SIZE 0x8000
 
-char *flashROM;
+char flashROM[300000];
+
+// Dummy function prototpyes
+int flash_firmwareprocess(void);
+void scrubFirmwareFlash(void);
+void firmwareupdate(void);
+int validate_fw(uint8_t* flashROM, int storageSize, int somethingElse);
+int uart_rx(int x, unsigned char* buffer);
+void Error_Handler(void);
 
 int mainF() {
 
@@ -79,6 +88,8 @@ int flash_firmwareprocess(void) {
 
 		return 0;
 	}
+
+	return 0;
 }
 
 /**

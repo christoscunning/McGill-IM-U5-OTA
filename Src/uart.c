@@ -27,8 +27,12 @@
 UART_HandleTypeDef *UARTHandles[MAX_NUMBER_UART_HANDLES] = {NULL};
 
 /**
- * Associates the huartNum with a UART_HandleTypeDef pointer.
+ * @brief   Associates the huartNum with a UART_HandleTypeDef pointer.
  * This is mainly so that uart_rx and uart_rx_it can have the same function prototype.
+ *
+ * @param   huartNum The UART number to be associated with the UART handle pointer.
+ * @param   huart The pointer to the UART handle.
+ * @retval  Returns -1 if there is an error, otherwise, returns huartNum if successful.
  */
 int register_UART(int huartNum, UART_HandleTypeDef *huart) {
 	if (huartNum >= MAX_NUMBER_UART_HANDLES || huartNum < 1) {
@@ -39,8 +43,12 @@ int register_UART(int huartNum, UART_HandleTypeDef *huart) {
 }
 
 /**
+ * Returns the huartNum associated with the specified UART_HandleTypeDef pointer.
  * Checks if huart pointer is in the UARTHandles array, if so returns the UART
  * number else returns -1.
+ *
+ * @param   huart
+ * @retval  The associated huartNum
  */
 int get_UART_num(UART_HandleTypeDef *huart){
 	// get huartNum
@@ -53,13 +61,47 @@ int get_UART_num(UART_HandleTypeDef *huart){
 	return huartNum;
 }
 
+/**
+ * @brief   Used to make sure UART connection is working properly. Waits to recieve 2 bytes of data over UART, then
+ * 			sends 2 bytes back (0x61, 0x62).
+ * @note    Clears interrupt RX buffer.
+ * @param   huart The UART handle of the UART connection that is being checked.
+ */
+void checkConnection(UART_HandleTypeDef *huart) {
+	char buffer[2];
+
+	//HAL_StatusTypeDef ret;
+//	while (HAL_UART_Receive(huart, (uint8_t*) buffer, 2, 1000) != HAL_OK) {
+//		printf("Waiting for confirmation...\n");
+//	}
+
+	uart_rx_it_clear_buffer(get_UART_num(huart));
+
+	printf("Waiting for confirmation...\n");
+	while (uart_rx_it_get_length(get_UART_num(huart)) != 2) {
+		//HAL_Delay(50);
+	}
+
+	// clear UART buffer
+	uart_rx_it_clear_buffer(get_UART_num(huart));
+
+	// confirmation received
+	printf("Received confirmation: %c %c. Sending confirmation back...\n", buffer[0], buffer[1]);
+
+	buffer[0] = 'a';
+	buffer[1] = 'b';
+	HAL_UART_Transmit(huart, (uint8_t*) buffer, 2, HAL_MAX_DELAY);
+	//uart_tx();
+}
+
 /*******************************************************************************/
 /*							Polling UART									   */
 /*******************************************************************************/
 
 /**
- * @brief   Receives a <dataLength> number of bytes through the specified UART
- * 			interface in polling mode.
+ * Receives a <dataLength> number of bytes through the specified UART
+ * interface in polling mode. The function will block until the desired
+ * amount has been read or an error occurs.
  *
  * @param   huart The handle of the UART that will be used to receive the data.
  * @param   dataLength The number of bytes that will be received. This function
@@ -108,7 +150,8 @@ int uart_rx(UART_HandleTypeDef *huart, int dataLength, char *data) {
 }
 
 /**
- * @brief   Transmit a specified number of bytes using the specified UART in blocking mode.
+ * Transmit a specified number of bytes using the specified UART in blocking mode.
+ * The function will block until the desired amount has been written or an error occurs.
  *
  * @param   huart The handle of the UART used to transmit the data.
  * @param   dataLength The number of bytes that will be transmitted.
@@ -223,6 +266,9 @@ int uart_rx_it(UART_HandleTypeDef *huart, int dataLength, char *data) {
  * @brief   Used in the UART interrupt callback to add newly received data to the UART buffer. Once the data
  * 			is in the UART buffer, it can be consumed using the uart_rx_it() function.
  *
+ *	When data is received through UART interrupt, call this function to store it in a buffer until
+ * 	it is read back using uart_rx_it_get().
+ *
  * @param   huartNum The UART identifier. Ex: huart1 -> 1, huart2 -> 2.
  * @param   dataLength The number of bytes received.
  * @param   data Pointer to the array containing the received data.
@@ -272,7 +318,9 @@ int uart_rx_it_put(int huartNum, int dataLength, char *data) {
 }
 
 /**
- * @brief   Used in the uart_rx_it() function to consume data from the UART buffer.
+ * @brief   Get data_lengths numbers of bytes from UART RX buffer.
+ *
+ * Used in the uart_rx_it() function to consume data from the UART buffer.
  *
  * @param   huartNum The UART identifier. Ex: huart1 -> 1, huart2 -> 2.
  * @param   dataLength The number of bytes of data that will be consumed from the UART buffer.

@@ -24,13 +24,12 @@
   */
 typedef enum
 {
-  BGAPI_MODE       = 0x00,
+  BGAPI_MODE   = 0x00,
   DATA_MODE    = 0x01
 } BT122_UART_MODES;
 
 /* Functions prototypes */
 void initializeBGLIB();
-//static void onMessageSend(uint8_t msg_len, uint8_t *msg_data, uint16_t data_len, uint8_t *data);
 void printMACAddress(bd_addr address);
 void echoReceived(uint8_t endpoint, unsigned int bytes);
 HAL_StatusTypeDef setBT122UARTMode(int mode);

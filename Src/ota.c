@@ -12,6 +12,7 @@
 #include "uart.h"
 #include "flash.h"
 #include "util.h"
+#include "main.h"
 
 
 #include "bgapi.h"
@@ -19,6 +20,136 @@
 /* Private variables */
 
 /* Functions */
+
+/**
+ * Perform BT122 OTA firmware upgrade. Downloads new firmware image
+ * over Bluetooth using BT122. Then switches BT122 UART connection
+ * to BGAPI mode, and using BGAPI commands to perform DFU on BT122
+ * with new firmware image.
+ *
+ * @param   flashAddress The address of where to download BT122 firmware image to.
+ * @param   huart The UART handle of the UART used for communication with BT122.
+ * @param   hhash The HASH handle used for computing SHA256 hash.
+ * @retval  Status of the BT122 firmware upgrade.
+ */
+HAL_StatusTypeDef BT122FirmwareUpgrade(const uint32_t flashAddress, UART_HandleTypeDef *huart, HASH_HandleTypeDef *hhash) {
+	int FIRMWARE_SIZE = 253952;
+
+	// Download firmware then restart
+	if ((*(__IO uint32_t*) flashAddress) == 0x20007ffc) {
+		printf("Firmware already downloaded.\n");
+	} else {
+		// Download firmware to flash
+		setBT122UARTMode(DATA_MODE);
+		checkConnection(huart);
+		downloadFirmwareToFlash(huart, flashAddress, FIRMWARE_SIZE);
+		HAL_NVIC_SystemReset();
+	}
+
+	// check sha256 hash of firmware data
+	char firmwareDigest[32];
+	computeHashFromFlash(hhash, (uint32_t) flashAddress, FIRMWARE_SIZE, firmwareDigest);
+	printf("Firmware sha256 hash: \n");
+	printBuffer(firmwareDigest, 32, "%02x");
+	printf("\n");
+
+	// update bt122 using new firmware
+	uart_rx_it_clear_buffer(get_UART_num(huart));
+
+	printf("Starting BT122 DFU...\n");
+
+	FirmwareInfo fi = uploadFirmwareToBT122(huart, flashAddress, FIRMWARE_SIZE);
+	printf("Firmware upload status: %d (0 = HAL_OK, 1 = HAL_ERROR)\n", fi.status);
+	printf("Old bootloader version = %ld. New bootloader version: %d\n", fi.oldBootloaderVersion, fi.newBootloaderVersion);
+	printf("New firmware version: %d.%d.%d+%d\n", fi.major, fi.minor, fi.patch, fi.build);
+
+	return fi.status;
+}
+
+/**
+ * Perform U5 OTA firmware upgrade. Downloads new firmware image
+ * over Bluetooth using BT122. Saves new firmware image to unused
+ * flash bank. Then swaps flash banks to complete firmware upgrade.
+ *
+ * @param   huart The UART handle of the UART used for communication with BT122.
+ * @param   hhash The HASH handle used for computing SHA256 hash.
+ * @retval  Status of the U5 firmware upgrade.
+ */
+HAL_StatusTypeDef U5FirmwareUpgrade(UART_HandleTypeDef *huart, HASH_HandleTypeDef *hhash) {
+		int FIRMWARE_SIZE = 47876;
+
+		// get current option bytes
+		FLASH_OBProgramInitTypeDef opbytes;
+		HAL_FLASHEx_OBGetConfig(&opbytes);
+		printf("UserConfig OB: 0x%08lx\n", opbytes.USERConfig);
+
+		// current value of OB_SWAP_BANKS bit
+		uint32_t swap_banks = opbytes.USERConfig & (0x1 << 20U);
+		printf("Swap banks: 0x%08lx\n", swap_banks);
+
+
+		// Always download new firmware to 0x08200000 address. Underlying banks
+		// may swap, but addresses stay the same.
+		uint32_t u5FirmwareDownloadAddress = 0x08200000;
+
+		// download new u5 firmware
+		setBT122UARTMode(DATA_MODE);
+		checkConnection(huart);
+		downloadFirmwareToFlash(huart, u5FirmwareDownloadAddress, FIRMWARE_SIZE);
+
+		// swap flash banks
+
+		// Unlock flash and flash option bytes
+		HAL_FLASH_Unlock();
+		HAL_FLASH_OB_Unlock();
+
+		// program new option bytes -> toggle swap bank bit
+		if ((opbytes.USERConfig & OB_SWAP_BANK_ENABLE) == OB_SWAP_BANK_ENABLE) {
+			// clear swap bank bit
+			opbytes.USERConfig &= ~(OB_SWAP_BANK_ENABLE);
+			opbytes.USERType |= OB_USER_SWAP_BANK;
+		} else {
+			// set swap bank bit
+			opbytes.USERConfig |= OB_SWAP_BANK_ENABLE;
+			opbytes.USERType |= OB_USER_SWAP_BANK;
+		}
+
+		// Program new byte
+		HAL_StatusTypeDef opbStatus = HAL_FLASHEx_OBProgram(&opbytes);
+		if (opbStatus != HAL_OK) {
+			printf("Error programming option bytes.\n");
+		} else {
+			printf("Successfully programmed option bytes.\n");
+		}
+
+		// Wait for button to be pressed to confirm new firmware (optional step).
+		printf("Press button to HAL_FLASH_OB_Launch():...\n");
+		int status = HAL_GPIO_ReadPin(USER_BUTTON_GPIO_Port, USER_BUTTON_Pin);
+		while (status == 1) {
+			// wait for button to become unpressed
+			status = HAL_GPIO_ReadPin(USER_BUTTON_GPIO_Port, USER_BUTTON_Pin);
+		}
+		while (status == 0 ) {
+			// do nothing until pin changes
+			status = HAL_GPIO_ReadPin(USER_BUTTON_GPIO_Port, USER_BUTTON_Pin);
+		}
+
+		HAL_FLASHEx_OBGetConfig(&opbytes);
+		printf("UserConfig OB: 0x%08lx\n", opbytes.USERConfig);
+		// HAL_FLASH_OB_Launch should not return...
+		HAL_StatusTypeDef OBerror = HAL_FLASH_OB_Launch();
+		if (OBerror != HAL_OK) {
+			printf("Error launching new option bytes.\n");
+			HAL_FLASHEx_OBGetConfig(&opbytes);
+			printf("UserConfig OB: 0x%08lx\n", opbytes.USERConfig);
+		}
+		HAL_FLASH_OB_Lock();
+		HAL_FLASH_Lock();
+
+		// If HAL_FLASH_OB_Launch() returns, that means there was an error with
+		// the firmware upgrade.
+		return HAL_ERROR;
+}
 
 
 /**

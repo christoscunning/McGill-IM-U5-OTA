@@ -12,7 +12,6 @@
 #define __FLASH_H
 
 /* Includes */
-
 #include "stm32u5xx_hal.h"
 
 /* Defines */
@@ -22,7 +21,6 @@
 
 
 /* Functions prototypes */
-
 
 // Error handling
 void printFlashError(uint32_t flashErrorCode);

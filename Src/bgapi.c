@@ -1,7 +1,7 @@
 /**
   ******************************************************************************
-  * @file           : bgapi.c
-  * @brief          : BGAPI functions
+  * @file           bgapi.c
+  * @brief          BGAPI functions
   ******************************************************************************
 */
 
@@ -19,19 +19,25 @@
  * Define BGLIB library
  */
 BGLIB_DEFINE();
-// Functions prototype
+
+/* Static functions prototype */
 static void onMessageSend(uint8_t msg_len, uint8_t *msg_data, uint16_t data_len, uint8_t *data);
 
 
 /* Private variables */
 
-/* DEPRECATED: Control sequence for BT122 to enter UART bgapi mode */
-const char BGAPI_CONTROL_CHAR[] = { 0x47, 0x54, 0x82, 0x02 };
-
+// UART handle used for BGAPI communication with BT122
 UART_HandleTypeDef *huartBGAPI;
+
 
 /* Functions */
 
+/**
+ * Initializing the BGAPI library. Also gets the uart handle that will be used for
+ * communicating with the BT122.
+ *
+ * @param   huart The handle of the UART connected to BT122.
+ */
 void initializeBGLIB(UART_HandleTypeDef *huart) {
 	// Get pointer to UART handle that will be used for executing bgapi operations
 	huartBGAPI = huart;
@@ -42,6 +48,7 @@ void initializeBGLIB(UART_HandleTypeDef *huart) {
 
 /**
  * Function called when a message needs to be written to the serial port.
+ *
  * @param msg_len  Length of the message.
  * @param msg_data Message data, including the header.
  * @param data_len Optional variable data length.
@@ -50,8 +57,6 @@ void initializeBGLIB(UART_HandleTypeDef *huart) {
 static void onMessageSend(uint8_t msg_len, uint8_t *msg_data, uint16_t data_len, uint8_t *data) {
 	/* Variable for storing function return values. */
 	int ret;
-
-	//printf("onMessageSend()\r\n");
 
 	ret = uart_tx(huartBGAPI, msg_len, (char*) msg_data);
 	if (ret < 0) {
@@ -73,7 +78,7 @@ static void onMessageSend(uint8_t msg_len, uint8_t *msg_data, uint16_t data_len,
 
 /**
 * @brief   Print MAC address.
-* @param   bd_addr
+* @param   bd_addr MAC address to print.
 */
 void printMACAddress(bd_addr address) {
 	for (int i = 5; i >= 0; i--) {
@@ -94,12 +99,13 @@ void echoReceived(uint8_t endpoint, unsigned int bytes) {
 
 
 /**
- * Turn bt122 uart to data mode or bgapi mode. Note, LED0 on bt122 indicates uart mode:
+ * Turn BT122 UART to data mode or BGAPI mode. Note, LED0 on bt122 indicates UART mode:
  * LED0: on (0) = BGAPI mode, off (1) = DATA mode.
  * Note: LED0 is active low.
  *
- * @param mode 0: set BT122 UART in BGAPI mode
- * 			   1: set BT122 UART in DATA  mode
+ * @param   mode 0: set BT122 UART in BGAPI mode
+ * 			     1: set BT122 UART in DATA  mode
+ * @retval  HAL_OK if BT122 UART mode set succesfully, HAL_ERROR otherwise.
  */
 HAL_StatusTypeDef setBT122UARTMode(int mode) {
 	int currentMode = HAL_GPIO_ReadPin(BT122_PF3_GPIO_Port, BT122_PF3_Pin);
@@ -135,26 +141,6 @@ HAL_StatusTypeDef setBT122UARTMode(int mode) {
 	return HAL_OK;
 }
 
-//void setBT122UARTMode(int mode) {
-//	uint16_t LED_mask = 0x0008;
-//	uint16_t LED_data = 0x0000;
-//	if (mode == 1) {
-//		// setting uart mode -> bgapi mode
-//		HAL_UART_Transmit(&huartBGAPI, (uint8_t*) BGAPI_CONTROL_CHAR, 4,
-//		HAL_MAX_DELAY);
-//		// turn on LED
-//		dumo_cmd_hardware_write_gpio(2, LED_mask, LED_data);
-//	} else if (mode == 0) {
-//		// turn off LED
-//		dumo_cmd_hardware_write_gpio(2, LED_mask, LED_mask);
-//		// setting uart mode -> data mode
-//		dumo_cmd_hardware_set_uart_bgapi_mode(0);
-//	} else {
-//		printf("Error: mode must be 0 or 1\n");
-//	}
-//}
-
-
 
 /**
  * Test toggling between BT122 UART modes.
@@ -168,6 +154,8 @@ void testBGAPI_Test1() {
 	setBT122UARTMode(1); // set to data mode
 	HAL_Delay(1000);
 	setBT122UARTMode(0); // set to bgapi mode
+
+	printf("BGAPI - Test 1 complete.\n");
 }
 
 /**
@@ -239,9 +227,8 @@ void testBGAPI_Test2() {
 
 			i++;
 		}
-
-
 	}
+	printf("BGAPI - Test 2 complete.\n");
 }
 
 /**

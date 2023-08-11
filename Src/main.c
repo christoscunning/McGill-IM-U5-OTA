@@ -31,7 +31,6 @@
 #include "flash.h"
 #include "util.h"
 #include "bgapi.h"
-#include "validate.h"
 
 //#include "dumo_bglib.h"
 
@@ -64,8 +63,6 @@ UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
 
-char *firmware;
-
 // UART Interrupt Buffers
 uint8_t huart1RxInterruptBuffer[1];
 uint8_t huart2RxInterruptBuffer[1];
@@ -81,8 +78,6 @@ static void MX_ICACHE_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_USART2_UART_Init(void);
 /* USER CODE BEGIN PFP */
-
-void checkConnection(UART_HandleTypeDef *huart);
 
 /* USER CODE END PFP */
 
@@ -113,40 +108,6 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
 		HAL_UART_Receive_IT(&huart2, huart2RxInterruptBuffer, 1);
 	}
 }
-
-/**
- * @brief   Used to make sure UART connection is working properly. Waits to recieve 2 bytes of data over UART, then
- * 			sends 2 bytes back (0x61, 0x62).
- * @note    Clears interrupt RX buffer.
- * @param   huart The UART handle of the UART connection that is being checked.
- */
-void checkConnection(UART_HandleTypeDef *huart) {
-	char buffer[2];
-
-	//HAL_StatusTypeDef ret;
-//	while (HAL_UART_Receive(huart, (uint8_t*) buffer, 2, 1000) != HAL_OK) {
-//		printf("Waiting for confirmation...\n");
-//	}
-
-	uart_rx_it_clear_buffer(get_UART_num(huart));
-
-	printf("Waiting for confirmation...\n");
-	while (uart_rx_it_get_length(get_UART_num(huart)) != 2) {
-		//HAL_Delay(50);
-	}
-
-	// clear UART buffer
-	uart_rx_it_clear_buffer(get_UART_num(huart));
-
-	// confirmation received
-	printf("Received confirmation: %c %c. Sending confirmation back...\n", buffer[0], buffer[1]);
-
-	buffer[0] = 'a';
-	buffer[1] = 'b';
-	HAL_UART_Transmit(huart, (uint8_t*) buffer, 2, HAL_MAX_DELAY);
-	//uart_tx();
-}
-
 
 /* USER CODE END 0 */
 
@@ -186,7 +147,7 @@ int main(void) {
 	MX_USART2_UART_Init();
 	/* USER CODE BEGIN 2 */
 
-	// Start UART 2 interrupt
+	// Setup UART 2 interrupt
 	register_UART(1, &huart1);
 	register_UART(2, &huart2);
 	HAL_UART_Receive_IT(&huart1, huart1RxInterruptBuffer, 1);
@@ -196,6 +157,8 @@ int main(void) {
 	initializeBGLIB(&huart2);
 
 	printf("\n\nStarted on u5a5 - firmware 1.0\n\n");
+
+	/* TESTING */
 
 //	testUARTInterruptBuffer_Test2(&huart1);
 
@@ -217,13 +180,13 @@ int main(void) {
 //		// end of testing
 //	}
 
-/*
+	/* END TESTING */
+
+	/* Debug info */
 
 	uint32_t x = FLASH_SIZE;
 	uint32_t y = FLASH_BANK_SIZE;
 	printf("Flash size: %ld. Flash bank size: %ld\n", x, y);
-
-
 
 	// determine which firmware version is loaded onto each bank
 	// 0x0800 bank:
@@ -232,142 +195,19 @@ int main(void) {
 	__IO uint32_t version0820 = (*(__IO uint32_t*) 0x0820b254);
 	printf("0x0800 bank: 0x%08lx, 0x0820 bank: 0x%08lx\n", version0800, version0820);
 
-
-	// get current option bytes
-	FLASH_OBProgramInitTypeDef opbytes;
-	HAL_FLASHEx_OBGetConfig(&opbytes);
-	printf("UserConfig OB: 0x%08lx\n", opbytes.USERConfig);
-
-	// current value of OB_SWAP_BANKS bit
-	uint32_t swap_banks = opbytes.USERConfig & (0x1 << 20U);
-	printf("Swap banks: 0x%08lx\n", swap_banks);
+	/* END Debug info */
 
 
-	// determine which bank is currently in use, so we can download new firmware to the other bank
-	// if swap_banks == 0x00000000, that means currently running from firmware at 0x08000000
-	// if swap_banks == 0x00100000, that means currently running from firmware at 0x08200000
-//	uint32_t u5FirmwareDownloadAddress = 0x08000000;
-//	if (swap_banks == 0) {
-//		u5FirmwareDownloadAddress = 0x08200000;
-//	}
+	/* OTA */
 
-	// 0x08000000
-	uint32_t u5FirmwareDownloadAddress = 0x08200000;
+	//BT122FirmwareUpgrade(FLASH_USER_START_ADDR, &huart2, &hhash);
 
-	// download new u5 firmware
-	setBT122UARTMode(DATA_MODE);
-	checkConnection(&huart2);
-	downloadFirmwareToFlash(&huart2, u5FirmwareDownloadAddress, 47876);
+	U5FirmwareUpgrade(&huart2, &hhash);
 
 
-
-	// swap flash banks
-	HAL_FLASH_Unlock();
-	HAL_FLASH_OB_Unlock();
-
-	// program new option bytes
-	// toggle bit
-	if ((opbytes.USERConfig & OB_SWAP_BANK_ENABLE) == OB_SWAP_BANK_ENABLE) {
-		// clear swap bank bit
-		opbytes.USERConfig &= ~(OB_SWAP_BANK_ENABLE);
-		opbytes.USERType |= OB_USER_SWAP_BANK;
-	} else {
-		// set swap bank bit
-		opbytes.USERConfig |= OB_SWAP_BANK_ENABLE;
-		opbytes.USERType |= OB_USER_SWAP_BANK;
-	}
-	HAL_StatusTypeDef opbStatus = HAL_FLASHEx_OBProgram(&opbytes);
-	if (opbStatus != HAL_OK) {
-		printf("Error programming option bytes.\n");
-	} else {
-		printf("Successfully programmed option bytes.\n");
-	}
-
-	printf("Press button to HAL_FLASH_OB_Launch():...\n");
-	int status = HAL_GPIO_ReadPin(USER_BUTTON_GPIO_Port, USER_BUTTON_Pin);
-	while (status == 1) {
-		// wait for button to become unpressed
-		status = HAL_GPIO_ReadPin(USER_BUTTON_GPIO_Port, USER_BUTTON_Pin);
-	}
-	//HAL_GPIO_ReadPin(USER_BUTTON_GPIO_Port, USER_BUTTON_Pin)
-	while (status == 0 ) {
-		// do nothing until pin changes
-		//printf("old status: %d. Current status = %d\n", status, HAL_GPIO_ReadPin(USER_BUTTON_GPIO_Port, USER_BUTTON_Pin));
-
-		status = HAL_GPIO_ReadPin(USER_BUTTON_GPIO_Port, USER_BUTTON_Pin);
-	}
-
-	HAL_FLASHEx_OBGetConfig(&opbytes);
-	printf("UserConfig OB: 0x%08lx\n", opbytes.USERConfig);
-	// HAL_FLASH_OB_Launch should not return...
-	HAL_StatusTypeDef OBerror = HAL_FLASH_OB_Launch();
-	if (OBerror != HAL_OK) {
-		printf("Error launching new option bytes.\n");
-		HAL_FLASHEx_OBGetConfig(&opbytes);
-		printf("UserConfig OB: 0x%08lx\n", opbytes.USERConfig);
-	} else {
-		printf("Success launching new option bytes.\n");
-		HAL_FLASHEx_OBGetConfig(&opbytes);
-		printf("UserConfig OB: 0x%08lx\n", opbytes.USERConfig);
-	}
+	/* END OTA */
 
 
-	HAL_FLASH_OB_Lock();
-	HAL_FLASH_Lock();
-
-	// testing flash bank swap
-	while (1) {
-
-	}
-
-*/
-
-	// Download firmware then restart
-	if ((*(__IO uint32_t*) FLASH_USER_START_ADDR) == 0x20007ffc) {
-		printf("Firmware already downloaded.\n");
-	} else {
-		// Download firmware to flash
-		setBT122UARTMode(DATA_MODE);
-		checkConnection(&huart2);
-		downloadFirmwareToFlash(&huart2, FLASH_USER_START_ADDR, 253952);
-		HAL_NVIC_SystemReset();
-	}
-
-	// check sha256 hash of firmware data
-	char firmwareDigest[32];
-	computeHashFromFlash(&hhash, (uint32_t) FLASH_USER_START_ADDR, 253952, firmwareDigest);
-	printf("Firmware sha256 hash: \n");
-	printBuffer(firmwareDigest, 32, "%02x");
-	printf("\n");
-
-	// validate firmware
-	// validation function seems to not work for bt122 firmware (says firmware is invalid, but firmware works anyway..)
-
-//	char firmwareTemp[253952];
-//	memcpy(firmwareTemp, FLASH_USER_START_ADDR, 253952);
-//	fixEndianness((uint8_t *) firmwareTemp, 253952);
-//	if (validate_fw((uint8_t *) firmwareTemp, 253952, 0x2000) == 0) {
-//	//if (validate_fw((uint8_t *) FLASH_USER_START_ADDR, 253952, 0x2000) == 0) {
-//		printf("Error validating firmware.\n");
-//
-//		while (1) {}
-//	} else {
-//		printf("Firmware validation success.\n");
-//	}
-
-	// update bt122 using new firmware
-
-	// go to bgapi mode
-	uart_rx_it_clear_buffer(get_UART_num(&huart2));
-
-	printf("Entering bgapi mode...\n");
-	//setBT122UARTMode(BGAPI_MODE);
-
-
-	FirmwareInfo fi = uploadFirmwareToBT122(&huart2, FLASH_USER_START_ADDR, 253952);
-	printf("Firmware upload status: %d (0 = HAL_OK, 1 = HAL_ERROR)\n", fi.status);
-	printf("Old bootloader version = %ld. New bootloader version: %d\n", fi.oldBootloaderVersion, fi.newBootloaderVersion);
-	printf("New firmware version: %d.%d.%d+%d\n", fi.major, fi.minor, fi.patch, fi.build);
 
 	/* USER CODE END 2 */
 
