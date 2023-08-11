@@ -1,0 +1,4 @@
+../Src/validate.c:46:12:get_boot_version	9
+../Src/validate.c:94:12:validate_segment	5
+../Src/validate.c:114:5:validate_fw	11
+../Src/validate.c:182:5:validate_fw_file	2

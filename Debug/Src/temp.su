@@ -1,0 +1,3 @@
+../Src/temp.c:14:5:mainF	224	static
+../Src/temp.c:59:5:flash_firmwareprocess	8	static
+../Src/temp.c:89:6:firmwareupdate	296	static

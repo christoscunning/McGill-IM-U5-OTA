@@ -1,0 +1,14 @@
+# STM32CubeIDE ignore:
+.settings
+.metadata
+
+
+# Ignore Mac DS_Store files
+.DS_Store
+._.DS_Store
+**/.DS_Store
+
+
+# Ignore Doxygen stuff
+Doxygen
+Doxyfile

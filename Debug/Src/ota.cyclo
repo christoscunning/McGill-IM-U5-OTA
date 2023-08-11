@@ -1,0 +1,5 @@
+../Src/ota.c:29:5:download_firmware	3
+../Src/ota.c:71:19:downloadFirmwareHash	2
+../Src/ota.c:87:19:checkFirmwareHash	3
+../Src/ota.c:105:19:downloadFirmwareToFlash	12
+../Src/ota.c:230:14:uploadFirmwareToBT122	22

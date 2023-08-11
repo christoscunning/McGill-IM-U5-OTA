@@ -1,0 +1,11 @@
+../Src/uart.c:32:5:register_UART	16	static
+../Src/uart.c:43:5:get_UART_num	24	static
+../Src/uart.c:66:5:uart_rx	32	static
+../Src/uart.c:120:5:uart_tx	32	static
+../Src/uart.c:184:5:uart_rx_it	40	static
+../Src/uart.c:233:5:uart_rx_it_put	32	static
+../Src/uart.c:283:5:uart_rx_it_get	32	static
+../Src/uart.c:331:5:uart_rx_it_get_length	16	static
+../Src/uart.c:347:6:uart_rx_it_clear_buffer	16	static
+../Src/uart.c:370:6:testUARTInterruptBuffer_Test1	72	static
+../Src/uart.c:386:6:testUARTInterruptBuffer_Test2	72	static

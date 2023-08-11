@@ -1,0 +1,8 @@
+../Src/bgapi.c:35:6:initializeBGLIB	1
+../Src/bgapi.c:50:13:onMessageSend	5
+../Src/bgapi.c:78:6:printMACAddress	3
+../Src/bgapi.c:88:6:echoReceived	1
+../Src/bgapi.c:104:19:setBT122UARTMode	5
+../Src/bgapi.c:162:6:testBGAPI_Test1	1
+../Src/bgapi.c:176:6:testBGAPI_Test2	8
+../Src/bgapi.c:250:6:testBGAPI_Test3	12

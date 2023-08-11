@@ -1,0 +1,4 @@
+../Src/crc32.c:30:17:reflect	3
+../Src/crc32.c:46:6:crc32_init	4
+../Src/crc32.c:70:13:partial_crc	2
+../Src/crc32.c:77:10:crc32_calc	1
