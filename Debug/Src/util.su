@@ -1,5 +1,0 @@
-../Src/util.c:25:6:printBuffer	40	static
-../Src/util.c:40:5:isBigEndian	16	static
-../Src/util.c:51:19:fixEndianness	24	static
-../Src/util.c:87:19:computeHashFromFlash	8248	static
-../Src/util.c:120:6:testEndianness	104	static

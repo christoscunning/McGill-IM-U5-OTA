@@ -1,7 +1,9 @@
 # STM32CubeIDE ignore:
 .settings
 .metadata
-
+[Rr]elease
+[Dd]ebug
+.launch
 
 # Ignore Mac DS_Store files
 .DS_Store

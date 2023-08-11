@@ -1,5 +1,0 @@
-../Src/ota.c:29:5:download_firmware	8240	static
-../Src/ota.c:71:19:downloadFirmwareHash	24	static
-../Src/ota.c:87:19:checkFirmwareHash	24	static
-../Src/ota.c:105:19:downloadFirmwareToFlash	8240	static
-../Src/ota.c:230:14:uploadFirmwareToBT122	200	static

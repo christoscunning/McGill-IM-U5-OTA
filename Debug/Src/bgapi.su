@@ -1,8 +1,0 @@
-../Src/bgapi.c:35:6:initializeBGLIB	16	static
-../Src/bgapi.c:50:13:onMessageSend	32	static
-../Src/bgapi.c:78:6:printMACAddress	24	static
-../Src/bgapi.c:88:6:echoReceived	128	static
-../Src/bgapi.c:104:19:setBT122UARTMode	24	static
-../Src/bgapi.c:162:6:testBGAPI_Test1	8	static
-../Src/bgapi.c:176:6:testBGAPI_Test2	40	static
-../Src/bgapi.c:250:6:testBGAPI_Test3	40	static

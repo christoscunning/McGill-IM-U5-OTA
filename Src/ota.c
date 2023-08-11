@@ -20,50 +20,6 @@
 
 /* Functions */
 
-/**
- * @deprecated
- *
- * Downloads firmware data from UART and stores it in the firmware variable.
- * Returns 0 if successful, 1 if error occurred.
- */
-int download_firmware(UART_HandleTypeDef *huart, char *firmware, int size) {
-	int chunkSize = 8192;
-
-	// download firmware in page sized chunks (8 Kbytes)
-	int numChunks = size / chunkSize;
-	int leftOverBytes = size - (chunkSize * numChunks);
-	printf("downloading %d chunks of %d bytes each + %d left over bytes.\n", numChunks, chunkSize, leftOverBytes);
-
-	char firmwareChunk[8192];
-	//int flashWriteAddr = FLASH_FIRMWARE_STARTING_ADDR;
-
-	// get chunk from uart and write to flash
-	for (int i = 0; i < numChunks; i++) {
-		// read firmware data from uart
-		//int ret = uart_rx(huart, chunkSize, firmwareChunk);
-		HAL_StatusTypeDef ret = HAL_UART_Receive(huart,(uint8_t *) firmwareChunk, chunkSize, HAL_MAX_DELAY);
-		if (ret != HAL_OK) {
-			printf("failure reading firmware data over uart. ret = %d\n", ret);
-			return 1;
-		}
-
-		// save firmware data
-		memcpy(firmware, firmwareChunk, chunkSize);
-
-		firmware += chunkSize;
-		//flashWriteAddr += 8192;
-
-		printf("downloaded chunk, sending confirmation: \n");
-
-		// signal ready for more:
-		char confirmation[] = {0xFF};
-		uart_tx(huart, 1, confirmation);
-	}
-
-
-
-	return 0;
-}
 
 /**
  * Receives the 32 byte digest of the original firmware file over UART connection.
@@ -137,44 +93,12 @@ HAL_StatusTypeDef downloadFirmwareToFlash(UART_HandleTypeDef *huart, uint32_t fl
 		uart_rx_it_clear_buffer(get_UART_num(huart));
 
 		// write firmware page to flash
-		if (eraseFlashPage_Advanced(flashPage+i) != HAL_OK) {
+		if (eraseFlashPage(flashPage+i) != HAL_OK) {
 			return HAL_ERROR;
 		}
 		if (writeFlashPage(flashPage+i, firmwarePage) != HAL_OK) {
 			return HAL_ERROR;
 		}
-
-		// with advance erase and write functions
-//		uint32_t flashEraseBank;
-//		uint32_t flashErasePage;
-//		if (areFlashBanksSwapped() == 0) { // flash banks not swapped
-//			if (flashAddress < 0x08200000) {
-//				// bank 1
-//				flashEraseBank = FLASH_BANK_1;
-//				flashErasePage = flashPage + i;
-//			} else {
-//				// bank 2
-//				flashEraseBank = FLASH_BANK_2;
-//				flashErasePage = flashPage + i - 256;
-//			}
-//		} else { // flash banks are swapped
-//			if (flashAddress < 0x08200000) {
-//				// bank 2
-//				flashEraseBank = FLASH_BANK_2;
-//				flashErasePage = flashPage + i;
-//			} else {
-//				// bank 1
-//				flashEraseBank = FLASH_BANK_1;
-//				flashErasePage = flashPage + i - 256;
-//			}
-//		}
-//		if (eraseFlashPage_Advanced(flashEraseBank, flashErasePage, 1) != HAL_OK) {
-//			return HAL_ERROR;
-//		}
-//		if (writeFlashPage(flashPage+i, firmwarePage) != HAL_OK) {
-//			return HAL_ERROR;
-//		}
-
 
 		printf("Downloaded page %d, sending confirmation:\n", i);
 
@@ -200,7 +124,7 @@ HAL_StatusTypeDef downloadFirmwareToFlash(UART_HandleTypeDef *huart, uint32_t fl
 
 
 		// write received data to flash
-		if (eraseFlashPage_Advanced(flashPage + numPages) != HAL_OK) {
+		if (eraseFlashPage(flashPage + numPages) != HAL_OK) {
 			return HAL_ERROR;
 		}
 		if (writeFlashPage(flashPage + numPages, firmwarePage) != HAL_OK) {
