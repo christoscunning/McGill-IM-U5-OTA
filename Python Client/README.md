@@ -17,14 +17,14 @@ Also Python 3.7 is required to install and use the PyBluez library.
     Creates a virtual enviroment using Python 3.7 in a folder called venv.
 4. Activate the virutal enviroment. (This must be done anytime you want to run 
 a Python program using the PyBluez library. \
-	```./venv/Scripts/activate``` \
+	```./venv/Scripts/activate```  
 5. Install the PyBluez library using the wheel file. \
-	```pip install .\PyBluez-0.22-cp37-cp37m-win_amd64.whl``` \
+	```pip install .\PyBluez-0.22-cp37-cp37m-win_amd64.whl```  
 6. Run a Python script using the PyBluez library. Remember to run the script 
 using python rather than running the script directly. \
-	```python uart_client.py``` \
+	```python uart_client.py```  
 7. Deactivate the virtual environment when you are finished. \
-	```deactivate```  \
+	```deactivate```   
 8. Done. The PyBluez library is now installed. Remember to reactivate the 
 virtual environment anytime you want to run a program using the PyBluez library.
 
