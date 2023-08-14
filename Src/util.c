@@ -101,6 +101,7 @@ HAL_StatusTypeDef computeHashFromFlash(HASH_HandleTypeDef *hhash, uint32_t flash
 
 	// do leftover and call accumlt_end
 	memcpy(firmwarePage, (char *) flashAddress, leftOverBytes);
+	fixEndianness((uint8_t *) firmwarePage, leftOverBytes);
 	if (HAL_HASHEx_SHA256_Accmlt_End(hhash, (uint8_t *) firmwarePage, leftOverBytes, (uint8_t *) digest, HAL_MAX_DELAY) != HAL_OK) {
 		printf("Error: calling accmlt_end\n");
 		return HAL_ERROR;

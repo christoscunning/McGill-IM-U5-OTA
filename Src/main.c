@@ -173,7 +173,7 @@ int main(void) {
 
 
 //	testBGAPI_Test1();
-	//testBGAPI_Test2();
+//	testBGAPI_Test2();
 //	testBGAPI_Test3();
 //
 //	while (1) {
@@ -195,6 +195,8 @@ int main(void) {
 	__IO uint32_t version0820 = (*(__IO uint32_t*) 0x0820b254);
 	printf("0x0800 bank: 0x%08lx, 0x0820 bank: 0x%08lx\n", version0800, version0820);
 
+	printf("\n");
+
 	/* END Debug info */
 
 
@@ -202,7 +204,9 @@ int main(void) {
 
 	//BT122FirmwareUpgrade(FLASH_USER_START_ADDR, &huart2, &hhash);
 
-	U5FirmwareUpgrade(&huart2, &hhash);
+	if (U5FirmwareUpgrade(&huart2, &hhash) == HAL_ERROR) {
+		printf("U5 firmware upgrade failed.\n");
+	}
 
 
 	/* END OTA */

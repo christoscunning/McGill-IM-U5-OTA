@@ -33,35 +33,77 @@
  * @retval  Status of the BT122 firmware upgrade.
  */
 HAL_StatusTypeDef BT122FirmwareUpgrade(const uint32_t flashAddress, UART_HandleTypeDef *huart, HASH_HandleTypeDef *hhash) {
-	int FIRMWARE_SIZE = 253952;
+	// Flash not updating only seems to be a problem when debugging using STM32CubeIDE
 
 	// Download firmware then restart
-	if ((*(__IO uint32_t*) flashAddress) == 0x20007ffc) {
-		printf("Firmware already downloaded.\n");
-	} else {
-		// Download firmware to flash
-		setBT122UARTMode(DATA_MODE);
-		checkConnection(huart);
-		downloadFirmwareToFlash(huart, flashAddress, FIRMWARE_SIZE);
-		HAL_NVIC_SystemReset();
-	}
+//	if ((*(__IO uint32_t*) flashAddress) == 0x20007ffc) {
+//		printf("Firmware already downloaded.\n");
+//	} else {
+//		// Download firmware to flash
+//		setBT122UARTMode(DATA_MODE);
+//		checkConnection(huart);
+//
+//		// Receive firmware file size
+//
+//
+//		// Receive firmware hash
+//
+//
+//		// Receive firmware data
+//		downloadFirmwareToFlash(huart, flashAddress, FIRMWARE_SIZE);
+//		HAL_NVIC_SystemReset();
+//	}
 
-	// check sha256 hash of firmware data
+	// Download firmware to flash
+	setBT122UARTMode(DATA_MODE);
+	checkConnection(huart);
+
+	// Get firmware size
+	uint32_t firmwareSize;
+	while (uart_rx_it_get_length(get_UART_num(huart)) != 4) {
+		// wait to receive 4 bytes
+	}
+	uart_rx_it(huart, 4, (char *) &firmwareSize);
+	printf("Size of firmware to be received: %ld\n", firmwareSize);
+
+	// Get SHA256 hash of original firmware data
+	char expectedFirmwareDigest[32];
+	while (uart_rx_it_get_length(get_UART_num(huart)) != 32) {
+		// wait to receive 32 bytes
+	}
+	uart_rx_it(huart, 32, expectedFirmwareDigest);
+	printf("Expected firmware hash: \n");
+	printBuffer(expectedFirmwareDigest, 32, "%02x");
+	printf("\n");
+
+	// Download actual firmware data
+	downloadFirmwareToFlash(huart, flashAddress, firmwareSize);
+
+	// check sha256 hash of downloaded firmware data
 	char firmwareDigest[32];
-	computeHashFromFlash(hhash, (uint32_t) flashAddress, FIRMWARE_SIZE, firmwareDigest);
+	computeHashFromFlash(hhash, (uint32_t) flashAddress, firmwareSize, firmwareDigest);
 	printf("Firmware sha256 hash: \n");
 	printBuffer(firmwareDigest, 32, "%02x");
 	printf("\n");
+
+	// compare firmware hashes to ensure firmware data received correctly
+	if (checkFirmwareHash(expectedFirmwareDigest, firmwareDigest) == HAL_ERROR) {
+		// hashes do not match, return error
+		printf("Error downloading new firmware, firmware hashes do not match.\n");
+		return HAL_ERROR;
+	} else {
+		printf("Firmware hashes match. Proceeding with firmware upgrade.\n");
+	}
 
 	// update bt122 using new firmware
 	uart_rx_it_clear_buffer(get_UART_num(huart));
 
 	printf("Starting BT122 DFU...\n");
 
-	FirmwareInfo fi = uploadFirmwareToBT122(huart, flashAddress, FIRMWARE_SIZE);
+	FirmwareInfo fi = uploadFirmwareToBT122(huart, flashAddress, firmwareSize);
 	printf("Firmware upload status: %d (0 = HAL_OK, 1 = HAL_ERROR)\n", fi.status);
-	printf("Old bootloader version = %ld. New bootloader version: %d\n", fi.oldBootloaderVersion, fi.newBootloaderVersion);
-	printf("New firmware version: %d.%d.%d+%d\n", fi.major, fi.minor, fi.patch, fi.build);
+	//printf("Old bootloader version = %ld. New bootloader version: %d\n", fi.oldBootloaderVersion, fi.newBootloaderVersion);
+	//printf("New firmware version: %d.%d.%d+%d\n", fi.major, fi.minor, fi.patch, fi.build);
 
 	return fi.status;
 }
@@ -76,7 +118,7 @@ HAL_StatusTypeDef BT122FirmwareUpgrade(const uint32_t flashAddress, UART_HandleT
  * @retval  Status of the U5 firmware upgrade.
  */
 HAL_StatusTypeDef U5FirmwareUpgrade(UART_HandleTypeDef *huart, HASH_HandleTypeDef *hhash) {
-		int FIRMWARE_SIZE = 47876;
+		//int FIRMWARE_SIZE = 47876;
 
 		// get current option bytes
 		FLASH_OBProgramInitTypeDef opbytes;
@@ -87,15 +129,51 @@ HAL_StatusTypeDef U5FirmwareUpgrade(UART_HandleTypeDef *huart, HASH_HandleTypeDe
 		uint32_t swap_banks = opbytes.USERConfig & (0x1 << 20U);
 		printf("Swap banks: 0x%08lx\n", swap_banks);
 
+		// Start firmware download
+		setBT122UARTMode(DATA_MODE);
+		checkConnection(huart);
+
+		// Get firmware size
+		uint32_t firmwareSize;
+		while (uart_rx_it_get_length(get_UART_num(huart)) != 4) {
+			// wait to receive 4 bytes
+		}
+		uart_rx_it(huart, 4, (char *) &firmwareSize);
+		printf("Size of firmware to be received: %ld\n", firmwareSize);
+
+		// Get SHA256 hash of original firmware data
+		char expectedFirmwareDigest[32];
+		while (uart_rx_it_get_length(get_UART_num(huart)) != 32) {
+			// wait to receive 32 bytes
+		}
+		uart_rx_it(huart, 32, expectedFirmwareDigest);
+		printf("Expected firmware hash: \n");
+		printBuffer(expectedFirmwareDigest, 32, "%02x");
+		printf("\n");
+
 
 		// Always download new firmware to 0x08200000 address. Underlying banks
 		// may swap, but addresses stay the same.
 		uint32_t u5FirmwareDownloadAddress = 0x08200000;
 
 		// download new u5 firmware
-		setBT122UARTMode(DATA_MODE);
-		checkConnection(huart);
-		downloadFirmwareToFlash(huart, u5FirmwareDownloadAddress, FIRMWARE_SIZE);
+		downloadFirmwareToFlash(huart, u5FirmwareDownloadAddress, firmwareSize);
+
+		// check sha256 hash of downloaded firmware data
+		char firmwareDigest[32];
+		computeHashFromFlash(hhash, u5FirmwareDownloadAddress, firmwareSize, firmwareDigest);
+		printf("Firmware sha256 hash: \n");
+		printBuffer(firmwareDigest, 32, "%02x");
+		printf("\n");
+
+		// compare firmware hashes to ensure firmware data received correctly
+		if (checkFirmwareHash(expectedFirmwareDigest, firmwareDigest) == HAL_ERROR) {
+			// hashes do not match, return error
+			printf("Error downloading new firmware, firmware hashes do not match.\n");
+			return HAL_ERROR;
+		} else {
+			printf("Firmware hashes match. Proceeding with firmware upgrade.\n");
+		}
 
 		// swap flash banks
 
@@ -171,9 +249,9 @@ HAL_StatusTypeDef downloadFirmwareHash(UART_HandleTypeDef *huart, char *digest) 
  * @param computedDigest Digest computed based on the received firmware data.
  * @retval HAL_OK if the digests match (i.e. firmware matches) or HAL_ERROR if they do not match.
  */
-HAL_StatusTypeDef checkFirmwareHash(char *originalDigest, char *computedDigest) {
+HAL_StatusTypeDef checkFirmwareHash(char *expectedDigest, char *actualDigest) {
 	for (int i = 0; i < 32; i++) {
-		if (originalDigest[i] != computedDigest[i]) {
+		if (expectedDigest[i] != actualDigest[i]) {
 			return HAL_ERROR;
 		}
 	}

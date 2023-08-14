@@ -43,7 +43,8 @@ HAL_StatusTypeDef downloadFirmwareToFlash(UART_HandleTypeDef *huart, uint32_t fl
 FirmwareInfo uploadFirmwareToBT122(UART_HandleTypeDef *huart, const uint32_t flashAddress, const uint32_t firmwareSize);
 
 
-// Test functions
+// Hash functions
+HAL_StatusTypeDef checkFirmwareHash(char *expectedDigest, char *actualDigest);
 
 
 #endif /* __OTA_H */
