@@ -25,8 +25,8 @@ class RFCOMM_Connection:
         else:
             return self.services[service_uuid]
         
-    def close_service(self, service_uuid):
-        self.services[service_uuid].close()
+    def close_service(self):
+        self.ser.close()
         
     def send(self, data):
         #self.services[service_uuid].send(data)

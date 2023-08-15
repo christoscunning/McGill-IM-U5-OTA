@@ -83,4 +83,4 @@ print("Firmware upload complete. Sent " + str(bytes_written) + " bytes of firmwa
 
 
 # close rfcomm service connection
-rf.close_service(uuid_spp)
+rf.close_service()
