@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<!--**
+  * project.xml
+  *
+  ********************************************************************************************
+  *     (C) Copyright 2020 Silicon Labs, http://www.silabs.com
+  ********************************************************************************************
+  * This file is licensed under the Silicon Labs License Agreement. For details see the file:
+  * http://developer.silabs.com/legal/version/v11/Silicon_Labs_Software_License_Agreement.txt
+  * Before using this software for any purpose, you must agree to the terms of that agreement.
+  *
+  ********************************************************************************************-->
+
+<!-- Project configuration including BT122 device type -->
+<project device="bt122">
+  
+  <!-- XML file containing GATT service and characteristic definitions both for BLE and GATT over BR -->
+  <!-- <gatt in="gatt.xml" /> -->
+
+  <!-- Local hardware interfaces configuration file -->
+  <hardware in="hardware.xml" />
+
+  <!-- BGScript source code file -->
+  <scripting>
+    <script in="uart_streaming.bgs"/>
+  </scripting>
+
+  <!-- Firmware output files -->
+  <image out="BT122_UART_STREAMING.bin"/>
+  
+  <ota out="BT122_UART_STREAMING.ota" />
+
+  <!-- Local SDP entries for Bluetooth BR/EDR -->
+  <sdp>
+    <entry file="did.xml" autoload="true"/>
+    <entry file="spp.xml" id="2"/>
+  </sdp>
+
+</project>

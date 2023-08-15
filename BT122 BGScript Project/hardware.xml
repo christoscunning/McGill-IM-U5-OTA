@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<!--**
+  * hardware.xml
+  *
+  ********************************************************************************************
+  *     (C) Copyright 2020 Silicon Labs, http://www.silabs.com
+  ********************************************************************************************
+  * This file is licensed under the Silicon Labs License Agreement. For details see the file:
+  * http://developer.silabs.com/legal/version/v11/Silicon_Labs_Software_License_Agreement.txt
+  * Before using this software for any purpose, you must agree to the terms of that agreement.
+  *
+  ********************************************************************************************-->
+
+<hardware>
+  <!-- Sleep modes disabled -->
+  <sleep enabled="false"/>
+
+  <!-- UART enabled @115200bps -->
+  <uart baud="115200" flowcontrol="false" bgapi="false" />
+
+  <!-- Configures PF2 (BUTTON1) as inputs with falling interrupts enabled. -->
+  <port index="2" input="0x0004" pullup="0x0004" interrupts_falling="0x0004" />
+
+  <!-- Configures PF3 (LED0) as output. -->
+  <port index="2" output="0x0008" />
+</hardware>
