@@ -32,6 +32,7 @@
 #include "util.h"
 #include "bgapi.h"
 
+// BGLIB setup is done in bgapi.c
 //#include "dumo_bglib.h"
 
 /* USER CODE END Includes */
@@ -202,11 +203,11 @@ int main(void) {
 
 	/* OTA */
 
-	//BT122FirmwareUpgrade(FLASH_USER_START_ADDR, &huart2, &hhash);
+	BT122FirmwareUpgrade(FLASH_USER_START_ADDR, &huart2, &hhash);
 
-	if (U5FirmwareUpgrade(&huart2, &hhash) == HAL_ERROR) {
-		printf("U5 firmware upgrade failed.\n");
-	}
+	//if (U5FirmwareUpgrade(&huart2, &hhash) == HAL_ERROR) {
+	//	printf("U5 firmware upgrade failed.\n");
+	//}
 
 
 	/* END OTA */

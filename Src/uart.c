@@ -62,7 +62,7 @@ int get_UART_num(UART_HandleTypeDef *huart){
 }
 
 /**
- * @brief   Used to make sure UART connection is working properly. Waits to recieve 2 bytes of data over UART, then
+ * @brief   Used to make sure UART connection is working properly. Waits to receive 2 bytes of data over UART, then
  * 			sends 2 bytes back (0x61, 0x62).
  * @note    Clears interrupt RX buffer.
  * @param   huart The UART handle of the UART connection that is being checked.
@@ -70,13 +70,10 @@ int get_UART_num(UART_HandleTypeDef *huart){
 void checkConnection(UART_HandleTypeDef *huart) {
 	char buffer[2];
 
-	//HAL_StatusTypeDef ret;
-//	while (HAL_UART_Receive(huart, (uint8_t*) buffer, 2, 1000) != HAL_OK) {
-//		printf("Waiting for confirmation...\n");
-//	}
-
+	// Clear any left over data from UART buffers
 	uart_rx_it_clear_buffer(get_UART_num(huart));
 
+	// Wait for client to send confirmation bytes
 	printf("Waiting for confirmation...\n");
 	while (uart_rx_it_get_length(get_UART_num(huart)) != 2) {
 		//HAL_Delay(50);

@@ -284,24 +284,40 @@ HAL_StatusTypeDef downloadFirmwareToFlash(UART_HandleTypeDef *huart, uint32_t fl
 	uint32_t flashPage = (flashAddress - 0x08000000) / FLASH_PAGE_SIZE; // starting page
 
 	for (int i = 0; i < numPages; i++) {
-		// received FLASH_PAGE_SIZE bytes over uart
-		while (uart_rx_it_get_length(get_UART_num(huart)) != FLASH_PAGE_SIZE) {
-			// waiting for all FLASH_PAGE_SIZE bytes to be received...
-		}
-//		HAL_	StatusTypeDef status = HAL_UART_Receive(huart, (uint8_t *) firmwarePage, FLASH_PAGE_SIZE, HAL_MAX_DELAY);
-//		if (status != HAL_OK) {
-//			printf("Error: failed to receive firmware data (page = %d) over UART (status = %d)\n", i, status);
-//			return status;
-//		}
-		if (uart_rx_it(huart, FLASH_PAGE_SIZE, firmwarePage) != FLASH_PAGE_SIZE) {
-			// did not received correct amount of bytes
-			printf("Error: did not receive correct amount of bytes.\n");
+		// received FLASH_PAGE_SIZE bytes over UART, CHUNK_SIZE bytes at a time
+
+		// how many bytes of firmware data to transmit at a time. Must fit evenly into FLASH_PAGE_SIZE.
+		const int CHUNK_SIZE = 8192;
+		if (FLASH_PAGE_SIZE % CHUNK_SIZE != 0) {
+			printf("Error: invalid CHUNK_SIZE. Must fit evenly into FLASH_PAGE_SIZE.\n");
 			return HAL_ERROR;
 		}
+		int bytesReceived = 0;
+		while (bytesReceived != CHUNK_SIZE) {
+			while (uart_rx_it_get_length(get_UART_num(huart)) != CHUNK_SIZE) {
+				// waiting for all CHUNK_SIZE bytes to be received...
+			}
+			if (uart_rx_it(huart, CHUNK_SIZE, &firmwarePage[bytesReceived]) != CHUNK_SIZE) {
+				// did not received correct amount of bytes
+				printf("Error: did not receive correct amount of bytes.\n");
+				return HAL_ERROR;
+			}
+			bytesReceived += CHUNK_SIZE;
+		}
+
+
+//		while (uart_rx_it_get_length(get_UART_num(huart)) != FLASH_PAGE_SIZE) {
+//			// waiting for all FLASH_PAGE_SIZE bytes to be received...
+//		}
+//		if (uart_rx_it(huart, FLASH_PAGE_SIZE, firmwarePage) != FLASH_PAGE_SIZE) {
+//			// did not received correct amount of bytes
+//			printf("Error: did not receive correct amount of bytes.\n");
+//			return HAL_ERROR;
+//		}
 
 		uart_rx_it_clear_buffer(get_UART_num(huart));
 
-		// write firmware page to flash
+		// write firmware to flash
 		if (eraseFlashPage(flashPage+i) != HAL_OK) {
 			return HAL_ERROR;
 		}
