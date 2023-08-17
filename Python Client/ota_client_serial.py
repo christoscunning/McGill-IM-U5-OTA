@@ -54,9 +54,16 @@ rf.send( firmware_hash.digest())
 input("press enter to send firmware")
 
 # send entire firmware file
-chunkSize = 8192 # send 8192 bytes at a time
-bytes_written = 0 # keep track of how many bytes have been sent
+
+# send 8192 bytes at a time. 
+# If you change this value, also make sure to change CHUNK_SIZE variable in the ota.c downloadFirmwareToFlash() function
+chunkSize = 8192 
+# keep track of how many bytes have been sent
+bytes_written = 0 
+# Number of chunks that will be sent
 numChunks = int(firmware_size // chunkSize)
+# firmware_size = (chunkSize * numChunks) + leftOverBytes
+# ex: IF (firmware_size = 80) & (chunkSize = 32) THEN (numChunks = 2) & (leftOverBytes = 16)
 leftOverBytes = int(firmware_size - (numChunks * chunkSize)) 
 for i in range(0, numChunks):
     firmware_chunk = firmware_data[i*chunkSize:(i+1)*chunkSize]
@@ -67,7 +74,7 @@ for i in range(0, numChunks):
     print("received reply: " + str(reply) + ", sending next bytes.")
 
 
-# send left over bytes (firmware data may not be equally divisible by chunkSize
+# send left over bytes (firmware data may not be equally divisible by chunkSize)
 if leftOverBytes > 0:
     firmware_chunk = firmware_data[numChunks*chunkSize:numChunks*chunkSize+leftOverBytes]
     rf.send( firmware_chunk)
