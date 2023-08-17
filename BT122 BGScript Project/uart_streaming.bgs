@@ -10,53 +10,29 @@
  ############################################################################################
  #
 
-#   *******************************************************************************************
-#   Assign MAC address of the Peripheral module to peripheral_address constant. Remember that byte order of MAC address must be reverted in this constant. For example for MAC address 00:07:80:a1:b1:c1 it should by equal to "\xc1\xb1\xa1\x80\x07\x00".
-#   *******************************************************************************************
-
-
-#laptop - F8-AC-65-EE-72-C5
-const peripheral_address() = "\x5a\x0a\x64\xe3\x64\xc4"
-
-#   ******************************************************************************************* 
-#   Build this project with script_version equal 1 (one) for the Central module and script_version equal 0 (zero) for the Peripheral module.
-#   *******************************************************************************************
-
-const script_version = 0
-
-#   *******************************************************************************************
-#   *******************************************************************************************
-
-
-dim result
-dim gpio_state
+# The RFCOMM endpoint number
 dim rfcomm_endpoint
 
+# Variable to track which mode the BT122 UART is currently in.
+# bgapi_mode_on = 1 => BGAPI mode
+# bgapi_mode_on = 0 => DATA mode
 dim bgapi_mode_on
 
 # This procedure starts the RFCOMM server (on the Peripheral side) and opens the connection (on the Central side).
 procedure starting_connection_establishment()
-
-  if (script_version = 1)
-
-    call bt_rfcomm_open(peripheral_address(0:6), 0, 2, "\x01\x11")
-  end if
-
-  if(script_version = 0)
-
-    call bt_gap_set_mode(1, 1, 0)
-    call bt_rfcomm_start_server(2, 0)
-  end if
+  call bt_gap_set_mode(1, 1, 0)
+  call bt_rfcomm_start_server(2, 0)
 end
 
 # After reset and system initialization, the security manager will be set, and the first connection establishment will be attempted.
 event system_initialized(addr)
 
+  # setup UART. Flow control is optional.
   # endpoint = 0, rate = 115200, data_bits = 8, stop_bits = 1, parity = 0 (none), flow_ctrl = 0 (none)
   call hardware_set_uart_configuration(0, 115200, 8, 1, 0, 0)
   
   #Set user-friendly server name
-  call system_set_local_name(24, "BT122 UART Streaming 1.0")
+  call system_set_local_name(24, "BT122 UART Streaming 10.0")
   
   # Configure Bluetooth Security Manager
   # No MITM required, no input/output -> Just Works pairing mode
@@ -73,7 +49,7 @@ event system_initialized(addr)
   call hardware_set_uart_bgapi_mode(1)
   bgapi_mode_on = 1
   
-  # start with LED on to signal uart mode = bgapi mode
+  # start with LED0 on (set PF3 low) to signal UART mode = BGAPI mode
   call hardware_write_gpio(2, $0008, $0000)
 end
 
@@ -82,15 +58,18 @@ end
 # After RFCOMM connection established, data stream from UART is routed to the corresponding endpoint.
 event bt_rfcomm_opened(endpoint, address)
 
-  # routing the stream
+  # routing the stream: RFCOMM <-> UART
   call endpoint_set_streaming_destination(0, endpoint)
   call endpoint_set_streaming_destination(endpoint, 0)
   rfcomm_endpoint = endpoint
 end
 
+
+# just for testing / debugging
 dim temp(10)
 
 #This event indicates incoming data from an endpoint
+# Only used for testing / debugging
 event endpoint_data(endpoint, data_len, data_data)
   # call endpoint_send(0, 6, "endp:'")
   # temp(0:4) = "0000"

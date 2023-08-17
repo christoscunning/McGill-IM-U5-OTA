@@ -50,7 +50,7 @@ print("Firmware SHA256 digest: " + str(firmware_digest))
 # send expected sha256 hash of firmware data
 rf.send( firmware_hash.digest())
 
-
+# wait for user input to confirm transmission of firmware image (optional)
 input("press enter to send firmware")
 
 # send entire firmware file
