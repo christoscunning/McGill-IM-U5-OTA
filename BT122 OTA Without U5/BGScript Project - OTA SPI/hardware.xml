@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<!--**
+  * hardware.xml
+  *
+  ********************************************************************************************
+  *     (C) Copyright 2022 Silicon Labs, http://www.silabs.com
+  ********************************************************************************************
+  * This file is licensed under the Silicon Labs License Agreement. For details see the file:
+  * http://developer.silabs.com/legal/version/v11/Silicon_Labs_Software_License_Agreement.txt
+  * Before using this software for any purpose, you must agree to the terms of that agreement.
+  *
+  ********************************************************************************************-->
+
+<hardware>
+  <!-- Sleep modes disabled -->
+  <sleep enabled="false"/>
+
+  <!-- UART enabled in `spi master` mode, 8000000bps, clock is low when inactive, data is valid on clock leading edge, most significant bit first. -->
+  <uart mode="spi_master" polarity="negative" phase="0" endianness="msb" baud="8000000" />
+
+
+  <!-- UART enabled @115200bps -->
+  <!-- <uart baud="115200" flowcontrol="false" bgapi="false" /> -->
+
+  <!-- configure pf2 as output -->
+  <port index="2" output="0x0004" />
+
+  <!-- Configures PF3 as output. -->
+  <port index="2" output="0x0008" />
+</hardware>

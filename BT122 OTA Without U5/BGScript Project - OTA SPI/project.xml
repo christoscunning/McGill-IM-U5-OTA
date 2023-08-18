@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<!--**
+  * project.xml
+  *
+  ********************************************************************************************
+  *     (C) Copyright 2022 Silicon Labs, http://www.silabs.com
+  ********************************************************************************************
+  * This file is licensed under the Silicon Labs License Agreement. For details see the file:
+  * http://developer.silabs.com/legal/version/v11/Silicon_Labs_Software_License_Agreement.txt
+  * Before using this software for any purpose, you must agree to the terms of that agreement.
+  *
+  ********************************************************************************************-->
+
+<!-- Project configuration including BT122 device type -->
+<project>
+  <gatt in="gatt.xml" />
+
+  <hardware in="hardware.xml" />
+
+  <sdp>
+    <entry file="did.xml" autoload="true" />
+    <entry file="spp.xml" id="2" />
+    <entry file="ota_control.xml" id="3" />
+    <entry file="ota_data.xml" id="4" />
+  </sdp>
+
+  <scripting>
+    <script in="spi_script.bgs" />
+  </scripting>
+
+<!--
+    Change bootloader used... requires further research
+  <bootloader fw="bootota" />
+-->
+
+  <image out="BT122_OTA_SPI.bin" />
+  <ota out="BT122_OTA_SPI.ota" />
+</project>

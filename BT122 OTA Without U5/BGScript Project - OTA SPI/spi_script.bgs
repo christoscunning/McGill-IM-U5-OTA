@@ -1,0 +1,524 @@
+#
+ # @file script.bgs
+ # @author Silicon Labs R&D Team
+ # @date January 2022
+ # @copyright (C) Copyright 2022 Silicon Labs
+ # @brief Example user application with support of the Over The Air firmware upgrade.
+ #
+ ############################################################################################
+ # (C) Copyright 2022 Silicon Labs, http://www.silabs.com
+ ############################################################################################
+ # This file is licensed under the Silicon Labs License Agreement. For details see the file:
+ # http://developer.silabs.com/legal/version/v11/Silicon_Labs_Software_License_Agreement.txt
+ # Before using this software for any purpose, you must agree to the terms of that agreement.
+ ############################################################################################
+ #
+const debug = 1
+
+const OTA_CONTROL_PORT = 7 # The RFCOMM port number for the control channel. #
+const OTA_DATA_PORT    = 8 # The RFCOMM port number for the data channel. #
+
+dim result_code              # Command execution result code. #
+dim current_minimum_key_size # Current setting of minimal allowed encryption key size value (in bytes).
+
+dim SPI_input_buffer(536)    # Buffer for the incoming data. #
+dim SPI_input_buffer_length # Command execution result code. #
+dim SPI_output_buffer(536)   # Buffer for the data to send. #
+
+dim dfu_pointer # The destination address (in the external FLASH memory) for the next OTA payload bytes. #
+
+dim ota_control_endpoint # Endpoint number for the control channel. #
+dim ota_data_endpoint    # Endpoint number for the data channel. #
+
+
+# added for led
+dim toggle
+dim blinking
+dim done_blinking
+
+
+# LED status variables
+dim gpio_0008_on
+dim gpio_0004_on
+
+################################################################################
+ ############################   STATIC FUNCTIONS   #############################
+ ##############################################################################
+ 
+ 
+procedure toggle_chip_select()
+    if gpio_0004_on = 0
+    call hardware_write_gpio(2, $0004, $0000)
+    gpio_0004_on = 1
+    else
+    call hardware_write_gpio(2, $0004, $0004)
+    gpio_0004_on = 0
+    end if
+end 
+
+dim x
+procedure blocking_blink(num_blinks)
+  blinking = num_blinks
+  toggle = 0
+  done_blinking = 0
+  x = 1
+  while x
+    # wait until done_blinking = 1
+    if blinking = 0
+      x = 0
+    end if
+    
+    if done_blinking = 1
+      x = 0
+    end if
+  end while
+end
+
+procedure FLASH_read_status_register(endpoint)
+  # start instr
+  call toggle_chip_select()
+  call hardware_read_write_spi(2, 2,"\x05\x00")(result_code, SPI_input_buffer_length, SPI_input_buffer(0:SPI_input_buffer_length))
+  # end instr
+  call toggle_chip_select()
+  call endpoint_send(endpoint, 1, SPI_input_buffer(1:1))
+end
+
+
+procedure FLASH_write_enable(endpoint)
+  # start instr
+  call toggle_chip_select()
+  call hardware_read_write_spi(1, 1, "\x06")(result_code, SPI_input_buffer_length, SPI_input_buffer(0:SPI_input_buffer_length))
+  # end instr
+  call toggle_chip_select()
+  #call endpoint_send(
+end
+
+#
+ # @desc Waits until the BUSY bit in the Status Register (erase / write in progress) is clear.
+ #
+procedure wait_until_FLASH_write_finished()
+  # start instr
+  call toggle_chip_select()
+  call hardware_read_write_spi(2, 2,"\x05\x00")(result_code, SPI_input_buffer_length, SPI_input_buffer(0:SPI_input_buffer_length))
+    # end instr
+  call toggle_chip_select()
+  
+  result_code = SPI_input_buffer(1:1)
+
+
+  while result_code & 1
+    # start instr
+    call toggle_chip_select()
+    call hardware_read_write_spi(2, 2, "\x05\x00")(result_code, SPI_input_buffer_length, SPI_input_buffer(0:SPI_input_buffer_length))
+    result_code = SPI_input_buffer(1:1)
+    # end instr
+    call toggle_chip_select()
+  end while
+end
+
+#
+ # @desc Erases 64 KB FLASH block.
+ # @param address_MSB_of_block Address of the begin of the data block to erase.
+ #
+procedure FLASH_block_erase(endpoint, address_MSB_of_block)
+  # start
+  call toggle_chip_select()
+  call hardware_read_write_spi(1, 1, "\x06")(result_code, SPI_input_buffer_length, SPI_input_buffer(0:SPI_input_buffer_length))
+  # end
+  call toggle_chip_select()
+
+  SPI_output_buffer(0:1) = "\xd8"
+  SPI_output_buffer(1:1) = address_MSB_of_block
+  SPI_output_buffer(2:1) = "\x00"
+  SPI_output_buffer(3:1) = "\x00"
+
+  # start
+  call toggle_chip_select()
+  call hardware_read_write_spi(4, 4, SPI_output_buffer(0:4))(result_code, SPI_input_buffer_length, SPI_input_buffer(0:SPI_input_buffer_length))
+  # end
+  call toggle_chip_select()
+  
+  call endpoint_send(endpoint, 2, result_code)
+  call wait_until_FLASH_write_finished()
+end
+
+procedure FLASH_chip_erase(endpoint)
+  # start WREN
+  call toggle_chip_select()
+  # WREN
+  call hardware_read_write_spi(1, 1, "\x06")(result_code, SPI_input_buffer_length, SPI_input_buffer(0:SPI_input_buffer_length))
+  # end WREN
+  call toggle_chip_select()
+  
+  # start CHER instruction
+  call toggle_chip_select()
+  # chip erase = 0xc7
+  call hardware_read_write_spi(1, 1, "\xc7")(result_code, SPI_input_buffer_length, SPI_input_buffer(0:SPI_input_buffer_length))
+  # end CHER instruction
+  call toggle_chip_select()
+  
+  call endpoint_send(endpoint, 2, result_code)
+  call wait_until_FLASH_write_finished()
+end
+
+#
+ # @desc Read flash and return value
+ # @param
+ #
+procedure FLASH_read(value_len, value_data())
+  
+  
+end
+
+#
+ # @desc Write to flash
+ # example: 
+ #          write_addr(0:3) = "\x12\x34\x56"
+ #          call FLASH_write(4, "\x22\x44\x66\x88")
+ # @param
+ #
+dim write_addr(4)
+procedure FLASH_write(value_len, value_data()) #, write_addr())
+    # WREN command (write enable?)
+    
+    # start
+    call toggle_chip_select()
+    call hardware_read_write_spi(1, 1, "\x06")(result_code, SPI_input_buffer_length, SPI_input_buffer(0:SPI_input_buffer_length))
+    # end
+    call toggle_chip_select()
+
+    SPI_input_buffer(0:4) = dfu_pointer
+    SPI_output_buffer(0:1) = "\x02" # command to write page
+    SPI_output_buffer(1:1) = write_addr(0:1) #"\x12" # address to write at (0xff0000)
+    SPI_output_buffer(2:1) = write_addr(1:1) #"\x34" # address to write at (0x00ff00)
+    SPI_output_buffer(3:1) = write_addr(2:1) #"\x56" # address to write at (0x0000ff)
+
+    memcpy(SPI_output_buffer(4), value_data(0), value_len)
+
+    # start
+    call toggle_chip_select()
+    call hardware_read_write_spi(value_len + 4, value_len + 4, SPI_output_buffer(0:value_len + 4))(result_code, SPI_input_buffer_length, SPI_input_buffer(0:SPI_input_buffer_length))
+    #call hardware_read_write_spi(value_len, value_len, SPI_output_buffer(0:value_len))(result_code, SPI_input_buffer_length, SPI_input_buffer(0:SPI_input_buffer_length))
+    # end
+    call toggle_chip_select()
+    
+    call wait_until_FLASH_write_finished()
+end
+
+#
+ # @desc Handles data, which has been written to the control characteristic.
+ # @param value_len  Characteristic value length.
+ # @param value_data Characteristic value.
+ #
+dim read_len
+dim write_len
+procedure handle_the_control_characteristic(endpoint, value_len, value_data())
+  # Test version  
+  if value_data(0:1) = 0 then
+    # echo sent data (minus starting control character)
+    call endpoint_send(endpoint, value_len-1, value_data(1:value_len-1))
+  end if
+
+  if value_data(0:1) = 1 then
+    # Read from flash
+    SPI_output_buffer(0:1) = "\x03"
+    SPI_output_buffer(1:3) = value_data(2:3) # "\x12\x34\x56"
+    
+    # change code to ignore first 4 received 'dummy' bytes
+    read_len = value_data(1:1) + 4 # READ AN EXTRA 4 BYTES
+    #read_len = value_data(1:1)
+
+    # start
+    call toggle_chip_select()
+    call hardware_read_write_spi(read_len, 4, SPI_output_buffer(0:4))(result_code, SPI_input_buffer_length, SPI_input_buffer(0:SPI_input_buffer_length))
+    # end
+    call toggle_chip_select()
+    
+    # send length read, then data, then result code
+    call endpoint_send(endpoint, 1, SPI_input_buffer_length-4)
+    #call endpoint_send(endpoint, 1, SPI_input_buffer_length)
+    call endpoint_send(endpoint, SPI_input_buffer_length-4, SPI_input_buffer(4:SPI_input_buffer_length))
+    #call endpoint_send(endpoint, SPI_input_buffer_length, SPI_input_buffer(0:SPI_input_buffer_length))
+    call endpoint_send(endpoint, 2, result_code)
+    
+  end if
+
+  if value_data(0:1) = 2 then
+    # Write to flash
+    write_addr(0:3) = value_data(1:3) #"\x12\x34\x56"
+    #call FLASH_write(4, "\x22\x44\x66\x88")
+    write_len = value_data(4:1)
+    call FLASH_write(write_len, value_data(5:write_len))
+    # send back result code (2 bytes)
+    call endpoint_send(endpoint, 2, result_code)
+  end if
+
+  if value_data(0:1) = 3 then
+    # erase flash
+    call FLASH_block_erase(endpoint, 0)
+    call FLASH_block_erase(endpoint, 1)  
+    call FLASH_block_erase(endpoint, 2)
+    call FLASH_block_erase(endpoint, 3)
+    
+    # return result code in each function call above
+  end if
+
+  if value_data(0:1) = 4 then
+    # input 0 = on
+    if value_data(1:1) = 0 then
+      call hardware_write_gpio(2, $0008, $0000)
+      gpio_0008_on = 1
+    end if
+    # input 1 = off
+    if value_data(1:1) = 1 then
+      call hardware_write_gpio(2, $0008, $0008)
+      gpio_0008_on = 0
+    end if
+    # input 2 = toggle
+    if value_data(1:1) = 2 then
+      if gpio_0008_on = 0
+        call hardware_write_gpio(2, $0008, $0000)
+        gpio_0008_on = 1
+      else
+        call hardware_write_gpio(2, $0008, $0008)
+        gpio_0008_on = 0
+      end if
+    end if
+  end if
+  
+  if value_data(0:1) = 5 then
+    ## input 0 = on
+    if value_data(1:1) = 0 then
+      call hardware_write_gpio(2, $0004, $0000)
+      gpio_0004_on = 1
+    end if
+    # input 1 = off
+    if value_data(1:1) = 1 then
+      call hardware_write_gpio(2, $0004, $0004)
+      gpio_0004_on = 0
+    end if
+    # input 2 = toggle
+    if value_data(1:1) = 2 then
+        call toggle_chip_select()
+    end if
+  end if
+  
+  if value_data(0:1) = 6 then
+    # chip erase
+    call FLASH_chip_erase(endpoint)
+  end if
+  
+  if value_data(0:1) = 7 then
+    call FLASH_read_status_register(endpoint)
+  end if
+  
+  if value_data(0:1) = 8 then
+    call FLASH_write_enable(endpoint)
+  end if
+  
+  # reset into DFU boot mode
+  if value_data(0:1) = 9 then
+    call system_reset(1)
+  end if
+end
+
+#
+ # @desc Handles data, which has been written to the data characteristic.
+ # @param value_len  Characteristic value length.
+ # @param value_data Characteristic value.
+ #
+procedure handle_the_data_characteristic(value_len, value_data())
+  # start
+  call toggle_chip_select()
+  call hardware_read_write_spi(1, 1, "\x06")(result_code, SPI_input_buffer_length, SPI_input_buffer(0:SPI_input_buffer_length))
+  # end
+  call toggle_chip_select()
+
+  SPI_input_buffer(0:4) = dfu_pointer
+  SPI_output_buffer(0:1) = "\x02"
+  SPI_output_buffer(1:1) = SPI_input_buffer(2:1)
+  SPI_output_buffer(2:1) = SPI_input_buffer(1:1)
+  SPI_output_buffer(3:1) = SPI_input_buffer(0:1)
+
+  memcpy(SPI_output_buffer(4), value_data(0), value_len)
+
+  # start
+  call toggle_chip_select()
+  call hardware_read_write_spi(value_len + 4, value_len + 4, SPI_output_buffer(0:value_len + 4))(result_code, SPI_input_buffer_length, SPI_input_buffer(0:SPI_input_buffer_length))
+  # end
+  call toggle_chip_select()
+  
+  call wait_until_FLASH_write_finished()
+
+  dfu_pointer = dfu_pointer + value_len
+end
+
+
+################################################################################
+ #############################   EVENTS HANDLERS   #############################
+ ##############################################################################
+
+event dfu_boot(version)
+    call system_reset(0)
+end
+
+
+#
+ # @desc `dumo_system_boot` event handler.
+ # @param major      Major release version.
+ # @param minor      Minor release version.
+ # @param patch      Patch release number.
+ # @param bootloader Build number.
+ # @param hw         Bootloader version.
+ #
+event system_boot(major, minor, patch, build, bootloader, hw)  
+  # Configures UART in `spi master` mode, 8000000bps, clock is high when inactive, data is valid on clock trailing edge, most significant bit first. #
+  call hardware_set_spi_configuration(0, 0, 0, 8000000)(result_code)
+  
+  dfu_pointer = 0
+  
+  # Print debug message
+  # if (debug = 1) then
+    # call endpoint_send(0, 14, "System started\n")
+  # end if
+end
+
+#
+ # @desc `dumo_system_initialized` event handler.
+ # @param addr Bluetooth BR/EDR address and LE public address in little endian format.
+ #
+event system_initialized(addr)
+  call sm_delete_bondings()(result_code)
+  call sm_set_bondable_mode(1)(result_code)
+  call sm_configure(2, 3)(result_code)
+  # Minimum allowed encryption key size value for bonding - 16 bytes
+  call sm_set_minimum_key_size(16)(result_code, current_minimum_key_size)
+
+  call bt_rfcomm_start_server(3, 0)(result_code)
+  call bt_rfcomm_start_server(4, 0)(result_code)
+  call bt_gap_set_mode(1, 1, 0)(result_code)
+
+  call le_gap_set_mode(le_gap_general_discoverable, le_gap_undirected_connectable)(result_code)
+  
+    #Set user-friendly name
+  call system_set_local_name(16, "BT122 SPI CC 1.0")
+  #call hardware_set_uart_bgapi_mode(1)
+  
+  # LED
+  toggle = 0
+  call hardware_set_soft_timer(5000, 0, 0)
+  call hardware_set_soft_timer(500, 1, 0)
+  
+  # start with LEDs off
+  call hardware_write_gpio(2, $0008, $0008)
+  call hardware_write_gpio(2, $0004, $0004)
+  
+  #blinking = 4
+  done_blinking = 1
+  gpio_0008_on = 0
+  gpio_0004_on = 0
+end
+  
+
+#
+ # @desc `dumo_bt_connection_parameters` event handler.
+ # @param endpoint     RFCOMM connection endpoint handle.
+ # @param block_size   Size of a single packet over RFCOMM.
+ # @param msc          Bit mask for MSC at the local device.
+ # @param address      Bluetooth address of the remote device in little endian format.
+ # @param direction    Direction of the connection.
+ # @param powermode    Power mode of the connection.
+ # @param role         Role in the connection.
+ # @param encryption   Encryption status of the connection.
+ # @param input_buffer Amount of data in the RFCOMM receive buffer.
+ # @param port         RFCOMM local port number that was connected.
+ #
+event bt_connection_parameters(endpoint, block_size, msc, address, direction, powermode, role, encryption, input_buffer, port)
+  
+  if port = OTA_CONTROL_PORT then
+    ota_control_endpoint = endpoint
+    call endpoint_set_streaming_destination(endpoint, 1)(result_code)
+  end if
+
+  if port = OTA_DATA_PORT then
+    ota_data_endpoint = endpoint
+    call endpoint_set_streaming_destination(endpoint, 1)(result_code)
+  end if
+end
+
+#
+ # @desc `dumo_endpoint_data` event handler.
+ # @param endpoint  The endpoint which received this data, i.e. to which it was sent.
+ # @param data_len  Data length.
+ # @param data_data Data.
+ #
+event endpoint_data(endpoint, data_len, data_data)
+
+  if endpoint = ota_control_endpoint then
+    call handle_the_control_characteristic(endpoint, data_len, data_data(0:data_len))
+    # send back confirmation
+    call endpoint_send(endpoint, 1, "\x00")
+  end if
+
+  if endpoint = ota_data_endpoint then
+    #call handle_the_data_characteristic(data_len, data_data(0:data_len))
+    call endpoint_send(endpoint, 1, "\x01")
+  end if
+end
+
+#
+ # @desc `dumo_hardware_bluetooth_controller_error` event handler.
+ # @param status               Event error code.
+ # @param error_data_dump_len  Length of optional additional detailed data.
+ # @param error_data_dump_data Optional additional detailed data related to the error and its conditions.
+ #
+event hardware_bluetooth_controller_error(status, error_data_dump_len, error_data_dump_data)
+
+  # External Bluetooth Controller is unresponsive. To recover restart (or power cycle) the BT122 module. #
+  if status = $0507 then
+    call system_reset(1)
+  end if
+end
+
+# added
+#generated when timer has lapsed
+event hardware_soft_timer(handle)
+
+  if handle = 0 then
+    # un-comment the following line to blink every 5 seconds
+    #blinking = 3
+    # This can be useful to generate firmware upgrade files with, then you can 
+    # tell if the firmware has been upgraded successfully, if the LED starts
+    # blinking after a firmware upgrade.
+  end if
+
+  if handle = 1 then
+    if blinking > 0 then
+      # the slow timer at 1Hz has lapsed
+      # blink LED
+      if toggle = 0 then
+        # turn on LED
+        call hardware_write_gpio(2, $0004, $0000)
+        toggle = 1
+        
+      else # if toggle = 1
+        # turn off LED
+        call hardware_write_gpio(2, $0004, $0004)
+        toggle = 0
+        
+        # decrement every time light goes on
+        blinking = (blinking - 1)
+        # if blinking counter reaches 0, then set done_blinking flag
+        if blinking = 0 then
+          done_blinking = 1
+        end if
+      end if
+    
+    # else
+      # call hardware_write_gpio(2, $0004, $0004)
+    end if
+  end if
+
+end
+
+############################################################################################

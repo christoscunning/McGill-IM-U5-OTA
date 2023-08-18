@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<!--**
+  * ota.xml
+  *
+  ********************************************************************************************
+  *     (C) Copyright 2022 Silicon Labs, http://www.silabs.com
+  ********************************************************************************************
+  * This file is licensed under the Silicon Labs License Agreement. For details see the file:
+  * http://developer.silabs.com/legal/version/v11/Silicon_Labs_Software_License_Agreement.txt
+  * Before using this software for any purpose, you must agree to the terms of that agreement.
+  *
+  ********************************************************************************************-->
+
+<!-- SDP records for custom Bluetooth OTA profile -->
+<ServiceRecord>
+  <ServiceClassIDList>
+    <ServiceClass uuid128="984227f334fc4045a5d02c581f81a153"/>
+  </ServiceClassIDList>
+
+  <ProtocolDescriptorList>
+    <Protocol>
+      <UUID16 value="0100"/>
+    </Protocol>
+    <Protocol>
+      <UUID16 value="03"/>
+      <UINT8  value="08"/>
+    </Protocol>
+  </ProtocolDescriptorList>
+
+  <BrowseGroupList>
+    <UUID16 value="1002"/>
+  </BrowseGroupList>
+
+  <LanguageBaseAttributeIDList>
+    <UINT16 value="656e"/>
+    <UINT16 value="006a"/>
+    <UINT16 value="0100"/>
+  </LanguageBaseAttributeIDList>
+
+  <BluetoothProfileDescriptorList>
+    <Profile>
+      <UUID16 value="1101"/>
+      <UINT16 value="0100"/>
+    </Profile>
+  </BluetoothProfileDescriptorList>
+
+  <!-- Service name -->
+  <ServiceName text="OTA data" language_id="0100"/>
+</ServiceRecord>
