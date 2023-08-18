@@ -12,6 +12,8 @@
  * 		 functions, a flash page is just a short hand way of specifying a flash
  * 		 address. See below for an example:
  *
+ * 	     This example is for the U5A5 with 4MB total flash memory split between
+ *		 two banks each of size 2MB.
  * 		 i.e.: page 0   <=> address 0x08000000
  * 		       page 1   <=> address 0x08002000
  * 		       ...
@@ -291,24 +293,24 @@ HAL_StatusTypeDef eraseFlashPage(int page) {
 	uint32_t flashEraseBank;
 	uint32_t flashErasePage;
 	if (areFlashBanksSwapped() == 0) { // flash banks not swapped
-		if (page < 256) {
+		if (page < FLASH_PAGE_NB) {
 			// bank 1
 			flashEraseBank = FLASH_BANK_1;
 			flashErasePage = page;
 		} else {
 			// bank 2
 			flashEraseBank = FLASH_BANK_2;
-			flashErasePage = page - 256;
+			flashErasePage = page - FLASH_PAGE_NB;
 		}
 	} else { // flash banks are swapped
-		if (page < 256) {
+		if (page < FLASH_PAGE_NB) {
 			// bank 2
 			flashEraseBank = FLASH_BANK_2;
 			flashErasePage = page;
 		} else {
 			// bank 1
 			flashEraseBank = FLASH_BANK_1;
-			flashErasePage = page - 256;
+			flashErasePage = page - FLASH_PAGE_NB;
 		}
 	}
 	// Configure flash erase init struct

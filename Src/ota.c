@@ -306,6 +306,7 @@ HAL_StatusTypeDef downloadFirmwareToFlash(UART_HandleTypeDef *huart, uint32_t fl
 		}
 
 
+		// OLD version with hard coded chunk size
 //		while (uart_rx_it_get_length(get_UART_num(huart)) != FLASH_PAGE_SIZE) {
 //			// waiting for all FLASH_PAGE_SIZE bytes to be received...
 //		}

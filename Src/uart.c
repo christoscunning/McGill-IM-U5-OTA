@@ -56,6 +56,7 @@ int get_UART_num(UART_HandleTypeDef *huart){
 	for (int i = 0; i < MAX_NUMBER_UART_HANDLES; i++) {
 		if (UARTHandles[i] == huart) {
 			huartNum = i;
+			break;
 		}
 	}
 	return huartNum;
