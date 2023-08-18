@@ -4,7 +4,7 @@ import sys
 from hashlib import md5, sha256
 from ota_functions_serial import RFCOMM_Connection, load_firmware_from_file, get_size_of_firmware, print_long_hex, print_bytes
 
-serial_com_port = "COM9"
+serial_com_port = "COM10"
 
 # Create rfcomm connection
 rf = RFCOMM_Connection("")
@@ -67,6 +67,7 @@ numChunks = int(firmware_size // chunkSize)
 leftOverBytes = int(firmware_size - (numChunks * chunkSize)) 
 for i in range(0, numChunks):
     firmware_chunk = firmware_data[i*chunkSize:(i+1)*chunkSize]
+    #print_long_hex(firmware_chunk, print_len=64)
     rf.send( firmware_chunk)
     bytes_written += chunkSize
     print("wrote chunk, waiting for confirmation before next chunk")

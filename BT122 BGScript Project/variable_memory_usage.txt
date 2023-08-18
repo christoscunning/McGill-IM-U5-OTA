@@ -1,4 +1,4 @@
-32
+18
 0:0	ENDPOINT_FLAG_ACTIVE
 0:0	ENDPOINT_FLAG_BGAPI
 0:0	ENDPOINT_FLAG_CLOSING
@@ -171,10 +171,6 @@
 0:0	test_pkt_11111111
 0:0	test_pkt_prbs15
 0:0	test_pkt_prbs9
-0:6	peripheral_address
-6:0	script_version
-6:4	result
-10:4	gpio_state
-14:4	rfcomm_endpoint
-18:4	bgapi_mode_on
-22:10	temp
+0:4	rfcomm_endpoint
+4:4	bgapi_mode_on
+8:10	temp

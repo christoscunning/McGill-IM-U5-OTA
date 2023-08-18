@@ -32,7 +32,7 @@ event system_initialized(addr)
   call hardware_set_uart_configuration(0, 115200, 8, 1, 0, 0)
   
   #Set user-friendly server name
-  call system_set_local_name(24, "BT122 UART Streaming 10.0")
+  call system_set_local_name(25, "BT122 UART Streaming 10.0")
   
   # Configure Bluetooth Security Manager
   # No MITM required, no input/output -> Just Works pairing mode
